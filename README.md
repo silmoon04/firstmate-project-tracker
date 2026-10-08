@@ -13,7 +13,10 @@ The laptop must be awake, connected and signed in. Unavailable connections leave
 an explicit offline state. Private content stays in browser memory, and the pairing
 key lasts only for the browser tab's session. Closing the tab requires pairing again.
 
-The deployment checks a fixed repository allowlist and copies six named files into
-the Pages artifact. Local developer notes, screenshots and test fixtures are excluded.
+The active Pages publishing source is the `main` branch with `.nojekyll`. The local
+export checks a fixed repository allowlist before pushing. Its nine public files
+contain only the application and deployment documentation. Local developer notes,
+screenshots and test fixtures are excluded. A manual Actions workflow can also
+build an artifact from the six named application files when Actions is available.
 The public address carries an HMAC proof. The app verifies it with the pairing key
 before sending credentials to an automatically discovered address.
