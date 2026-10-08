@@ -49,7 +49,7 @@
   }
   async function challengeEndpoint(expected) {
     if (expected !== pairing || !globalThis.crypto?.subtle) throw new Error('proof');
-    if (endpointProof?.pairing === expected && endpointProof.endpoint === expected.endpoint && Date.now() - endpointProof.at < 25000) return;
+    if (endpointProof?.pairing === expected && endpointProof.endpoint === expected.endpoint && performance.now() - endpointProof.at < 25000) return;
     if (proofPromise?.pairing === expected && proofPromise.endpoint === expected.endpoint) return proofPromise.promise;
     const endpoint = expected.endpoint;
     const promise = (async () => {
@@ -61,7 +61,7 @@
         if (body.nonce !== nonce || body.endpoint !== endpoint || body.service !== 'Firstmate Project Tracker private gateway' || body.version !== 1 || !/^[a-f0-9]{64}$/.test(body.proof || '')) throw new Error('proof');
         const bytes = new TextEncoder(), signature = Uint8Array.from(body.proof.match(/.{2}/g), hex => parseInt(hex, 16)), key = await crypto.subtle.importKey('raw', bytes.encode(expected.key), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']);
         if (!await crypto.subtle.verify('HMAC', key, signature, bytes.encode(`Firstmate challenge v1\n${nonce}\n${endpoint}`)) || expected !== pairing || endpoint !== expected.endpoint) throw new Error('proof');
-        endpointProof = { pairing: expected, endpoint, at: Date.now() };
+        endpointProof = { pairing: expected, endpoint, at: performance.now() };
       } catch { throw new Error('proof'); } finally { clearTimeout(deadline); controllers.delete(ctrl); }
     })();
     proofPromise = { pairing: expected, endpoint, promise };
