@@ -1,1 +1,5 @@
-{"schema_version":1,"endpoint":"","proof":""}
+{
+  "schema_version": 1,
+  "endpoint": "https://groove-babies-polyphonic-adds.trycloudflare.com",
+  "proof": "105096e544aa79c685dbc81e8039af9a41c432a6175714a7505827beeae81fd6"
+}
