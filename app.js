@@ -105,8 +105,9 @@
   async function load({ rediscover = true } = {}) {
     if (!pairing || busy) return; const currentLoad = ++loadId, startingPairing = pairing; busy = true; connection = 'loading'; endpointProof = null; renderConnection(); if (!snapshot) render();
     if (!pairing.manual) {
-      if (rediscover) await discover();
+      const automaticEndpoint = rediscover ? await discover() : discovered;
       if (currentLoad !== loadId || startingPairing !== pairing) return;
+      if (!automaticEndpoint) { busy = false; connection = 'offline'; errorText = 'The laptop connection address is unavailable. Your laptop or this device may be offline, asleep or reconnecting. Start Firstmate Project Tracker in Windows, reconnect to the internet, then refresh. ' + (snapshot ? 'Your pairing and saved snapshot are retained.' : 'Your pairing is retained.') + ' No pairing key was sent.'; render(); return; }
       const expectedPairing = pairing, verifiedEndpoint = discovered, verifiedProof = discoveryProof;
       if (!await verifyDiscovered(expectedPairing.key, verifiedEndpoint, verifiedProof)) { if (currentLoad !== loadId || expectedPairing !== pairing) return; busy = false; connection = 'offline'; errorText = 'The laptop address could not be verified with this pairing key. Start the tracker in Windows and copy its current key, then connect again. No key was sent to the unverified address.'; render(); return; }
       if (currentLoad !== loadId || expectedPairing !== pairing) return; pairing.endpoint = verifiedEndpoint; savePairing();
