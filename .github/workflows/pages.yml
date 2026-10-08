@@ -1,0 +1,32 @@
+name: Deploy public tracker shell
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: pages
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check public file allowlist
+        run: python3 tools/check_public.py
+      - uses: actions/configure-pages@v5
+      - name: Build from six explicit shell files
+        run: |
+          mkdir site
+          cp index.html app.css app.js favicon.svg connection.json .nojekyll site/
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: site
+      - uses: actions/deploy-pages@v4
+        id: deployment
