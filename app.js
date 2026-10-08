@@ -43,12 +43,12 @@
       return endpoint;
     } catch { discovered = ''; discoveryProof = ''; $('#discoveryStatus').textContent = 'The automatic laptop connection is unavailable. Start Firstmate Project Tracker in Windows, or enter a private HTTPS address below.'; return ''; }
   }
-  async function verifyDiscovered(key) {
-    if (!discovered || !discoveryProof || !globalThis.crypto?.subtle) return false;
-    try { const bytes = new TextEncoder(), signature = Uint8Array.from(discoveryProof.match(/.{2}/g), hex => parseInt(hex, 16)), imported = await crypto.subtle.importKey('raw', bytes.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']); return await crypto.subtle.verify('HMAC', imported, signature, bytes.encode(`Firstmate endpoint v1\n${discovered}`)); } catch { return false; }
+  async function verifyDiscovered(key, endpoint, proof) {
+    if (!endpoint || !proof || !globalThis.crypto?.subtle) return false;
+    try { const bytes = new TextEncoder(), signature = Uint8Array.from(proof.match(/.{2}/g), hex => parseInt(hex, 16)), imported = await crypto.subtle.importKey('raw', bytes.encode(key), { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']); return await crypto.subtle.verify('HMAC', imported, signature, bytes.encode(`Firstmate endpoint v1\n${endpoint}`)); } catch { return false; }
   }
   async function challengeEndpoint(expected) {
-    if (expected !== pairing || !crypto?.subtle) throw new Error('proof');
+    if (expected !== pairing || !globalThis.crypto?.subtle) throw new Error('proof');
     if (endpointProof?.pairing === expected && endpointProof.endpoint === expected.endpoint && Date.now() - endpointProof.at < 25000) return;
     if (proofPromise?.pairing === expected && proofPromise.endpoint === expected.endpoint) return proofPromise.promise;
     const endpoint = expected.endpoint;
@@ -69,10 +69,10 @@
   }
   async function request(path, asBlob = false, expected = pairing) {
     if (!expected || expected !== pairing) throw new Error('pairing_changed');
-    await challengeEndpoint(expected); if (expected !== pairing) throw new Error('pairing_changed');
+    const endpoint = expected.endpoint; await challengeEndpoint(expected); if (expected !== pairing || endpoint !== expected.endpoint) throw new Error('pairing_changed');
     const ctrl = new AbortController(); controllers.add(ctrl); if (asBlob) assetControllers.add(ctrl); const deadline = setTimeout(() => ctrl.abort(), asBlob ? 30000 : 15000);
     try {
-      const response = await fetch(expected.endpoint + path, { headers: { Authorization: `Bearer ${expected.key}` }, cache: 'no-store', credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: ctrl.signal });
+      const response = await fetch(endpoint + path, { headers: { Authorization: `Bearer ${expected.key}` }, cache: 'no-store', credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', signal: ctrl.signal });
       if (!response.ok) { const error = new Error(response.status === 401 || response.status === 403 ? 'auth' : response.status === 429 ? 'rate' : response.status === 503 ? 'upstream' : 'response'); error.status = response.status; if (error.message === 'auth' && expected === pairing) denyPairing(); throw error; }
       if (expected !== pairing) throw new Error('pairing_changed'); return asBlob ? response.blob() : response.json();
     } finally { clearTimeout(deadline); controllers.delete(ctrl); assetControllers.delete(ctrl); }
@@ -82,9 +82,9 @@
     if (!pairing.manual) {
       if (rediscover) await discover();
       if (currentLoad !== loadId || startingPairing !== pairing) return;
-      const expectedPairing = pairing;
-      if (!await verifyDiscovered(expectedPairing.key)) { if (expectedPairing !== pairing) { busy = false; return; } busy = false; connection = 'offline'; errorText = 'The laptop address could not be verified with this pairing key. Start the tracker in Windows and copy its current key, then connect again. No key was sent to the unverified address.'; render(); return; }
-      if (expectedPairing !== pairing) { busy = false; return; } pairing.endpoint = discovered; savePairing();
+      const expectedPairing = pairing, verifiedEndpoint = discovered, verifiedProof = discoveryProof;
+      if (!await verifyDiscovered(expectedPairing.key, verifiedEndpoint, verifiedProof)) { if (currentLoad !== loadId || expectedPairing !== pairing) return; busy = false; connection = 'offline'; errorText = 'The laptop address could not be verified with this pairing key. Start the tracker in Windows and copy its current key, then connect again. No key was sent to the unverified address.'; render(); return; }
+      if (currentLoad !== loadId || expectedPairing !== pairing) return; pairing.endpoint = verifiedEndpoint; savePairing();
     }
     const expected = pairing;
     const results = await Promise.allSettled(['/api/projects', '/api/updates', '/api/briefs', '/api/sync/status'].map(path => request(path, false, expected)));
@@ -232,6 +232,7 @@
   $('#pairForm').addEventListener('submit', connect); $('#connectionButton').addEventListener('click', () => $('#connectionPanel').hidden ? openConnection() : $('#connectionPanel').hidden = true); $('#closeConnection').addEventListener('click', () => { $('#connectionPanel').hidden = true; $('#connectionButton').focus(); }); $('#forgetButton').addEventListener('click', forget); $('#showKey').addEventListener('click', () => { const shown = $('#pairingKey').type === 'text'; $('#pairingKey').type = shown ? 'password' : 'text'; $('#showKey').textContent = shown ? 'Show' : 'Hide'; $('#showKey').setAttribute('aria-pressed', String(!shown)); }); $('#rememberTab').addEventListener('change', savePairing); $('#refreshButton').addEventListener('click', () => load()); $('#search').addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(() => { displayLimit = 12; render(); }, 160); }); $('#projectFilter').addEventListener('change', () => { displayLimit = 12; render(); });
   $('#closeImage').addEventListener('click', () => $('#imageViewer').close()); $('#imageViewer').addEventListener('close', () => { $('#viewerImage').removeAttribute('src'); if (imageTrigger?.isConnected) imageTrigger.focus(); }); $('#imageViewer').addEventListener('click', event => { if (event.target === $('#imageViewer')) { const rect = $('#imageViewer').getBoundingClientRect(); if (event.clientX < rect.left || event.clientX > rect.right || event.clientY < rect.top || event.clientY > rect.bottom) $('#imageViewer').close(); } });
   window.addEventListener('hashchange', () => { displayLimit = 12; $('#search').value = ''; $('#projectFilter').value = ''; render(); window.scrollTo(0, 0); $('#pageTitle').tabIndex = -1; $('#pageTitle').focus({ preventScroll: true }); }); window.addEventListener('online', () => { if (pairing) load(); }); window.addEventListener('pagehide', () => { controllers.forEach(c => c.abort()); });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && pairing && Date.now() - score(lastFetched) > 60000) load(); });
-  remember(); render(); discover().then(() => { if (pairing) load(); }); refreshTimer = setInterval(() => { if (pairing && document.visibilityState === 'visible' && route().view !== 'update') load(); }, 60000);
+  function canAutoRefresh() { return pairing && document.visibilityState === 'visible' && !['update', 'project', 'task', 'decisions'].includes(route().view) && $('#connectionPanel').hidden && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName); }
+  document.addEventListener('visibilitychange', () => { if (canAutoRefresh() && Date.now() - score(lastFetched) > 60000) load(); });
+  remember(); render(); discover().then(() => { if (pairing) load(); }); refreshTimer = setInterval(() => { if (canAutoRefresh()) load(); }, 60000);
 })();
