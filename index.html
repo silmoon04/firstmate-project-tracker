@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light">
-  <meta name="description" content="A private window onto your projects and saved updates. Pair with your laptop to read your work.">
+  <meta name="description" content="Your projects, work board, timeline and saved updates. Pair with your laptop to read your private workspace.">
   <title>Firstmate · Project Tracker</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./app.css">
@@ -15,17 +15,23 @@
   <a class="skip-link" href="#main">Skip to content</a>
   <div class="app">
     <aside class="sidebar">
-      <a class="brand" href="#projects" aria-label="Firstmate projects">
-        <svg viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3 27 9v14l-11 6-11-6V9Z"/><path d="m10 20 4-10 8 3-4 9Z"/></svg>
+      <a class="brand" href="#overview" aria-label="Firstmate overview">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m16.5 7.5-3 6-6 3 3-6Z"/></svg>
         <span>Firstmate<span class="brand-sub">Project tracker</span></span>
       </a>
       <nav class="navigation" aria-label="Main navigation">
+        <p class="nav-label">Work views</p>
+        <a href="#overview" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Overview</span></a>
+        <a href="#board" data-view="board"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16M5.5 8h1M11.5 8h1M17.5 8h1M5.5 12h1M11.5 12h1"/></svg><span>Board</span></a>
+        <a href="#timeline" data-view="timeline"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h4M13 17h4"/></svg><span>Timeline</span></a>
         <a href="#projects" data-view="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 3h10v12H3Z"/></svg><span>Projects</span></a>
-        <a href="#activity" data-view="activity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Activity</span></a>
+        <p class="nav-label source-label">Review and sources</p>
         <a href="#decisions" data-view="decisions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L20 5M4 4h8M4 20h16"/></svg><span>Decisions</span><span id="decisionCount" class="nav-count" hidden></span></a>
+        <a href="#activity" data-view="activity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Activity</span></a>
         <a href="#history" data-view="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v6h6M4 8a9 9 0 1 1 0 8M12 7v5l3 2"/></svg><span>History</span></a>
       </nav>
-      <p class="sidebar-note">Read your latest handoffs.<br>Keep the source close.</p>
+      <div id="projectShortcuts" class="project-shortcuts" hidden></div>
+      <div class="sidebar-note"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 4 6v6c0 5 8 9 8 9s8-4 8-9V6Z"/><path d="m8.5 12 2.5 2.5 4.5-5"/></svg><p>Your private workspace<br><span>Records stay on your laptop.</span></p></div>
     </aside>
     <div class="workspace">
       <header class="topbar">
@@ -34,7 +40,7 @@
       </header>
       <main id="main" tabindex="-1">
         <section id="connectionPanel" class="connection-panel" aria-labelledby="connectionTitle" hidden>
-          <div class="section-heading"><h2 id="connectionTitle">Connect to your laptop</h2><button id="closeConnection" type="button" class="icon-button" aria-label="Close connection settings">×</button></div>
+          <div class="section-heading"><h2 id="connectionTitle">Connect to your laptop</h2><button id="closeConnection" type="button" class="icon-button" aria-label="Close connection settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></div>
           <p>Your projects stay on your laptop. Copy the pairing key from Firstmate Project Tracker in Windows. This page finds the laptop’s current HTTPS connection.</p>
           <form id="pairForm">
             <p id="discoveryStatus" class="field-help" role="status">Checking the laptop connection…</p>
@@ -48,14 +54,16 @@
           </form>
         </section>
         <div id="notice" class="notice" role="status" hidden></div>
-        <header class="page-heading"><div><h1 id="pageTitle">Your projects</h1><p id="pageDescription">The latest handoff, and what comes next.</p></div><p id="snapshotTime" class="timestamp" hidden></p></header>
-        <div id="filters" class="filters" hidden><label class="search-label" for="search"><span class="sr-only">Search this view</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></svg><input id="search" type="search" placeholder="Search projects and updates" autocomplete="off"></label><label class="select-label"><span class="sr-only">Filter by project</span><select id="projectFilter"><option value="">All projects</option></select></label></div>
+        <details id="mobileMore" class="mobile-more"><summary>More views</summary><nav aria-label="Review and source views"><a href="#decisions" data-view="decisions"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12 4 4L20 5M4 4h8M4 20h16"/></svg><span>Decisions</span></a><a href="#activity" data-view="activity"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h4l3-8 4 16 3-8h4"/></svg><span>Activity</span></a><a href="#history" data-view="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v6h6M4 8a9 9 0 1 1 0 8M12 7v5l3 2"/></svg><span>History</span></a></nav></details>
+        <header class="page-heading"><div><h1 id="pageTitle">Your work, at a glance</h1><p id="pageDescription">Projects, recorded progress and what needs your attention.</p></div><p id="snapshotTime" class="timestamp" hidden></p></header>
+        <div id="filters" class="filters" hidden><label class="search-label" for="search"><span class="sr-only">Search this view</span><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></svg><input id="search" type="search" placeholder="Search projects and updates" autocomplete="off"></label><label class="select-label"><span class="sr-only">Filter by project</span><select id="projectFilter"><option value="">All projects</option></select></label><label class="select-label status-filter"><span class="sr-only">Filter by work status</span><select id="statusFilter"><option value="all">All statuses</option><option value="in_progress">In progress</option><option value="review">Needs review</option><option value="blocked">Blocked</option><option value="pending">Open</option><option value="unknown">Unverified</option><option value="done">Completed</option><option value="paused">Paused</option><option value="expired">Expired</option></select></label></div>
         <div id="content"></div>
         <footer class="footer"><div><p>Coordinator summaries and original chat messages are labelled separately. A saved response does not prove review, submission or a physical result.</p><p class="preview-note">Laptop-only previews and file paths can be copied for Windows. Codex links need the desktop app. Public web links and paired image/file artifacts are usable here.</p></div><p id="footerStatus">Private data loads after pairing.</p></footer>
       </main>
     </div>
   </div>
-  <dialog id="imageViewer" class="image-viewer" aria-labelledby="imageTitle"><header><h2 id="imageTitle">Project image</h2><button id="closeImage" class="icon-button" type="button" aria-label="Close image">×</button></header><div class="image-stage"><img id="viewerImage" alt=""></div><p id="imageContext"></p></dialog>
+  <nav class="mobile-navigation" aria-label="Main navigation"><a href="#overview" data-view="overview"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg><span>Overview</span></a><a href="#board" data-view="board"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16M15 4v16M5.5 8h1M11.5 8h1M17.5 8h1M5.5 12h1M11.5 12h1"/></svg><span>Board</span></a><a href="#timeline" data-view="timeline"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M7 3v4M17 3v4M3 10h18M7 14h4M13 17h4"/></svg><span>Timeline</span></a><a href="#projects" data-view="projects"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7V5h6l2 3h10v12H3Z"/></svg><span>Projects</span></a></nav>
+  <dialog id="imageViewer" class="image-viewer" aria-labelledby="imageTitle"><header><h2 id="imageTitle">Project image</h2><button id="closeImage" class="icon-button" type="button" aria-label="Close image"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M6 18 18 6"/></svg></button></header><div class="image-stage"><img id="viewerImage" alt=""></div><p id="imageContext"></p></dialog>
   <noscript><p class="noscript">Turn on JavaScript to pair with the private laptop service. This public page contains no project records.</p></noscript>
 </body>
 </html>

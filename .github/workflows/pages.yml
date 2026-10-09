@@ -19,10 +19,12 @@ jobs:
       - name: Check public file allowlist
         run: python3 tools/check_public.py
       - uses: actions/configure-pages@v5
-      - name: Build from six explicit shell files
+      - name: Build from explicit shell and reviewed font files
         run: |
           mkdir site
           cp index.html app.css app.js favicon.svg connection.json .nojekyll site/
+          mkdir site/fonts
+          cp fonts/Sora.ttf fonts/Manrope.ttf fonts/Sora-OFL.txt fonts/Manrope-OFL.txt site/fonts/
       - uses: actions/upload-pages-artifact@v4
         with:
           path: site
